@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>AES Encrypt/Decrypt</title>
+</head>
+<body>
+  <h2>Encrypt Image</h2>
+  <form id="encryptForm">
+    <input type="file" id="imgFile" accept="image/*" required><br>
+    <select id="mode">
+      <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
+    </select><br>
+    <button type="submit">Encrypt & Download</button>
+  </form>
+
+  <h2>Decrypt .bin File</h2>
+  <form id="decryptForm">
+    <input type="file" id="binFile" accept=".bin" required><br>
+    <select id="mode2">
+      <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
+    </select><br>
+    <button type="submit">Decrypt & Download</button>
+  </form>
+
+  <script>
+    document.getElementById("encryptForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append("file", document.getElementById("imgFile").files[0]);
+      formData.append("mode", document.getElementById("mode").value);
+
+      const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/encrypt/", {
+        method: "POST",
+        body: formData,
+      });
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "encrypted_output.bin";
+      a.click();
+    };
+
+    document.getElementById("decryptForm").onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append("file", document.getElementById("binFile").files[0]);
+      formData.append("mode", document.getElementById("mode2").value);
+
+      const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/decrypt/", {
+        method: "POST",
+        body: formData,
+      });
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "decrypted_image.png";
+      a.click();
+    };
+  </script>
+</body>
+</html>
