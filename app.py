@@ -5,6 +5,7 @@ from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad, unpad
 import io
 import os
+import base64
 
 app = FastAPI()
 
@@ -19,12 +20,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def aes_encrypt(data: bytes, mode: str) -> bytes:
+def aes_encrypt_image_with_header(data: bytes, mode: str, header_size: int = 54) -> bytes:
+    header = data[:header_size]
+    body = data[header_size:]
+    
     iv = os.urandom(BLOCK_SIZE) if mode != "ECB" else b""
     cipher_cls = getattr(AES, f"MODE_{mode}")
     cipher = AES.new(key, cipher_cls, iv=iv) if iv else AES.new(key, cipher_cls)
-    ct = cipher.encrypt(pad(data, BLOCK_SIZE))
-    return iv + ct if iv else ct
+    
+    ct = cipher.encrypt(pad(body, BLOCK_SIZE))
+    encrypted_image = header + (iv + ct if iv else ct)
+    
+    return encrypted_image
 
 def aes_decrypt(payload: bytes, mode: str) -> bytes:
     if mode == "ECB":
@@ -38,19 +45,41 @@ def aes_decrypt(payload: bytes, mode: str) -> bytes:
 async def root():
     return {"message": "200 OK"}
 
-@app.post("/encrypt/")
-async def encrypt_file(mode: str = Form(...), file: UploadFile = File(...)):
+# @app.post("/encrypt/")
+# async def encrypt_file(mode: str = Form(...), file: UploadFile = File(...)):
+#     data = await file.read()
+#     mode = mode.upper()
+#     ct = aes_encrypt(data, mode)
+
+#     return StreamingResponse(
+#         io.BytesIO(ct),
+#         media_type="application/octet-stream",
+#         headers={
+#             "Content-Disposition": "attachment; filename=encrypted_image.bin"
+#         }
+#     )
+
+
+@app.post("/encrypt_viewable")
+async def encrypt_and_return_viewable_image(
+    mode: str = Form(...),
+    file: UploadFile = File(...)
+):
     data = await file.read()
     mode = mode.upper()
-    ct = aes_encrypt(data, mode)
 
-    return StreamingResponse(
-        io.BytesIO(ct),
-        media_type="application/octet-stream",
-        headers={
-            "Content-Disposition": "attachment; filename=encrypted_image.bin"
-        }
-    )
+    # BMP or PPM image expected
+    header_size = 54  # BMP header size
+    encrypted_image = aes_encrypt_image_with_header(data, mode, header_size)
+
+    # For display
+    encoded_image = base64.b64encode(encrypted_image).decode("utf-8")
+
+    return {
+        "b64_image": encoded_image,
+        "download_filename": "viewable_encrypted_image.bmp"  # or .ppm
+    }
+
 
 @app.post("/decrypt/")
 async def decrypt_file(mode: str = Form(...), file: UploadFile = File(...)):

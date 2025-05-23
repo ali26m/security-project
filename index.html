@@ -2,60 +2,191 @@
 <html>
 <head>
   <title>AES Encrypt/Decrypt</title>
+  <style>
+    /* Reset and base styling */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f2f4f8;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+
+    h2 {
+      color: #2c3e50;
+      text-align: center;
+    }
+
+    /* Centered container */
+    body > form, body > img, body > a {
+      display: block;
+      margin: 20px auto;
+      max-width: 90%;
+    }
+
+    /* Form styling */
+    form {
+      background: #fff;
+      padding: 20px 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    input[type="file"],
+    select {
+      display: block;
+      width: 100%;
+      padding: 10px;
+      margin: 12px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 1em;
+    }
+
+    /* Button styling */
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 12px;
+      width: 100%;
+      font-size: 1em;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    /* Image display */
+    img {
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      margin-top: 10px;
+      max-width: 300px;
+      display: block;
+    }
+
+    /* Download link styling */
+    a#downloadEncryptedView {
+      text-align: center;
+      display: block;
+      margin-top: 10px;
+      background: #28a745;
+      color: white;
+      padding: 12px;
+      width: 300px;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: bold;
+      transition: background 0.3s ease;
+    }
+
+    a#downloadEncryptedView:hover {
+      background: #1e7e34;
+    }
+
+  </style>
 </head>
 <body>
-  <h2>Encrypt Image</h2>
+  <!-- <h2>Encrypt Image</h2>
   <form id="encryptForm">
     <input type="file" id="imgFile" accept="image/*" required><br>
     <select id="mode">
       <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
     </select><br>
     <button type="submit">Encrypt & Download</button>
+  </form> -->
+  <h2>Encrypt Image</h2>
+  <form id="viewableEncryptForm">
+    <input type="file" id="viewFile" accept=".bmp" required><br>
+    <select id="viewMode">
+      <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
+    </select><br>
+    <button type="submit">Encrypt</button>
   </form>
+  <br>
+  <img id="encryptedImg" width="300" type="image/bmp" alt="Encrypted Image" style="display:none;">
+  <br>
+  <a id="downloadEncryptedView" download="encrypted_view.bmp">Download Encrypted Image</a>
 
-  <h2>Decrypt .bin File</h2>
+  <!-- <h2>Decrypt .bin File</h2>
   <form id="decryptForm">
     <input type="file" id="binFile" accept=".bin" required><br>
     <select id="mode2">
       <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
     </select><br>
     <button type="submit">Decrypt & Download</button>
-  </form>
+  </form> -->
 
   <script>
-    document.getElementById("encryptForm").onsubmit = async (e) => {
+    document.getElementById("viewableEncryptForm").onsubmit = async (e) => {
       e.preventDefault();
       const formData = new FormData();
-      formData.append("file", document.getElementById("imgFile").files[0]);
-      formData.append("mode", document.getElementById("mode").value);
+      formData.append("file", document.getElementById("viewFile").files[0]);
+      formData.append("mode", document.getElementById("viewMode").value);
 
-      const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/encrypt/", {
+      const res = await fetch("https://image-enc-5f496b3f4bf8.hosted.ghaymah.systems/encrypt_viewable/", {
         method: "POST",
         body: formData,
       });
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "encrypted_output.bin";
-      a.click();
-    };
+      const json = await res.json();
 
-    document.getElementById("decryptForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const formData = new FormData();
-      formData.append("file", document.getElementById("binFile").files[0]);
-      formData.append("mode", document.getElementById("mode2").value);
+      // Display image
+      // const imageElem = document.getElementById("encryptedImg");
+      // imageElem.src = "data:image/bmp;base64," + json.b64_image;
+      
+      // let testImg = new Image();
+      // testImg.src = "data:image/bmp;base64," + json.b64_image;
+      // document.body.appendChild(testImg);
+      // document.getElementById("encryptedImg").data = "data:image/bmp;base64," + json.b64_image;
 
-      const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/decrypt/", {
-        method: "POST",
-        body: formData,
-      });
-      const blob = await res.blob();
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "decrypted_image.png";
-      a.click();
+
+      // Set download link
+      const link = document.getElementById("downloadEncryptedView");
+      const blob = new Blob([Uint8Array.from(atob(json.b64_image), c => c.charCodeAt(0))], { type: "image/bmp" });
+      link.href = URL.createObjectURL(blob);
     };
+  </script>
+
+  <script>
+    // document.getElementById("encryptForm").onsubmit = async (e) => {
+    //   e.preventDefault();
+    //   const formData = new FormData();
+    //   formData.append("file", document.getElementById("imgFile").files[0]);
+    //   formData.append("mode", document.getElementById("mode").value);
+
+    //   const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/encrypt/", {
+    //     method: "POST",
+    //     body: formData,
+    //   });
+    //   const blob = await res.blob();
+    //   const a = document.createElement("a");
+    //   a.href = URL.createObjectURL(blob);
+    //   a.download = "encrypted_output.bin";
+    //   a.click();
+    // };
+
+    // document.getElementById("decryptForm").onsubmit = async (e) => {
+    //   e.preventDefault();
+    //   const formData = new FormData();
+    //   formData.append("file", document.getElementById("binFile").files[0]);
+    //   formData.append("mode", document.getElementById("mode2").value);
+
+    //   const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/decrypt/", {
+    //     method: "POST",
+    //     body: formData,
+    //   });
+    //   const blob = await res.blob();
+    //   const a = document.createElement("a");
+    //   a.href = URL.createObjectURL(blob);
+    //   a.download = "decrypted_image.png";
+    //   a.click();
+    // };
   </script>
 </body>
 </html>
