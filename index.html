@@ -1,192 +1,145 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>AES Encrypt/Decrypt</title>
+  <meta charset="UTF-8">
+  <title>User Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   <style>
-    /* Reset and base styling */
+    /* Base styles */
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f2f4f8;
+      background-color: #161616;
+      color: white;
+      font-family: Arial, sans-serif;
       margin: 0;
-      padding: 20px;
-      color: #333;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     h2 {
-      color: #2c3e50;
       text-align: center;
+      margin-top: 20px;
+      font-size: 1.5rem;
     }
 
-    /* Centered container */
-    body > form, body > img, body > a {
-      display: block;
-      margin: 20px auto;
-      max-width: 90%;
+    #map {
+      height: 400px;
+      width: 90%;
+      max-width: 800px;
+      margin: 20px 0;
+      border: 2px solid #b38e07;
+      border-radius: 10px;
     }
 
-    /* Form styling */
-    form {
-      background: #fff;
-      padding: 20px 25px;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      width: 100%;
-      max-width: 400px;
+    .button-container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 15px;
+      margin-bottom: 30px;
     }
 
-    input[type="file"],
-    select {
-      display: block;
-      width: 100%;
-      padding: 10px;
-      margin: 12px 0;
-      border: 1px solid #ccc;
-      border-radius: 8px;
-      font-size: 1em;
-    }
-
-    /* Button styling */
     button {
-      background: #007bff;
+      padding: 12px 20px;
+      font-size: 16px;
+      background-color: #b38e07;
       color: white;
       border: none;
-      padding: 12px;
-      width: 100%;
-      font-size: 1em;
       border-radius: 8px;
       cursor: pointer;
-      transition: background 0.3s ease;
+      transition: background-color 0.3s ease;
     }
 
     button:hover {
-      background: #0056b3;
+      background-color: #d4aa11;
     }
 
-    /* Image display */
-    img {
-      border: 1px solid #ccc;
-      border-radius: 10px;
-      margin-top: 10px;
-      max-width: 300px;
-      display: block;
-    }
+    @media (max-width: 600px) {
+      h2 {
+        font-size: 1.2rem;
+      }
 
-    /* Download link styling */
-    a#downloadEncryptedView {
-      text-align: center;
-      display: block;
-      margin-top: 10px;
-      background: #28a745;
-      color: white;
-      padding: 12px;
-      width: 300px;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: bold;
-      transition: background 0.3s ease;
-    }
+      #map {
+        height: 300px;
+      }
 
-    a#downloadEncryptedView:hover {
-      background: #1e7e34;
+      button {
+        width: 90%;
+        font-size: 14px;
+      }
     }
-
   </style>
 </head>
 <body>
-  <!-- <h2>Encrypt Image</h2>
-  <form id="encryptForm">
-    <input type="file" id="imgFile" accept="image/*" required><br>
-    <select id="mode">
-      <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
-    </select><br>
-    <button type="submit">Encrypt & Download</button>
-  </form> -->
-  <h2>Encrypt Image</h2>
-  <form id="viewableEncryptForm">
-    <input type="file" id="viewFile" accept=".bmp" required><br>
-    <select id="viewMode">
-      <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
-    </select><br>
-    <button type="submit">Encrypt</button>
-  </form>
-  <br>
-  <img id="encryptedImg" width="300" type="image/bmp" alt="Encrypted Image" style="display:none;">
-  <br>
-  <a id="downloadEncryptedView" download="encrypted_view.bmp">Download Encrypted Image</a>
+  <h2>Live User Location</h2>
+  <div id="map"></div>
 
-  <!-- <h2>Decrypt .bin File</h2>
-  <form id="decryptForm">
-    <input type="file" id="binFile" accept=".bin" required><br>
-    <select id="mode2">
-      <option>ECB</option><option>CBC</option><option>CFB</option><option>OFB</option>
-    </select><br>
-    <button type="submit">Decrypt & Download</button>
-  </form> -->
+  <div class="button-container">
+    <button onclick="callNumber('122')">Call 122</button>
+    <button id="callUser">Call the User</button>
+    <button id="callAdmin">Call Admin</button>
+  </div>
 
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
   <script>
-    document.getElementById("viewableEncryptForm").onsubmit = async (e) => {
-      e.preventDefault();
-      const formData = new FormData();
-      formData.append("file", document.getElementById("viewFile").files[0]);
-      formData.append("mode", document.getElementById("viewMode").value);
+    let map;
+    let marker;
 
-      const res = await fetch("https://image-enc-5f496b3f4bf8.hosted.ghaymah.systems/encrypt_viewable/", {
-        method: "POST",
-        body: formData,
-      });
-      const json = await res.json();
+    // Extract base64-encoded user_id from query
+    const query = new URLSearchParams(window.location.search);
+    const userId = query.get('user_id');
 
-      // Display image
-      // const imageElem = document.getElementById("encryptedImg");
-      // imageElem.src = "data:image/bmp;base64," + json.b64_image;
-      
-      // let testImg = new Image();
-      // testImg.src = "data:image/bmp;base64," + json.b64_image;
-      // document.body.appendChild(testImg);
-      // document.getElementById("encryptedImg").data = "data:image/bmp;base64," + json.b64_image;
+    if (!userId) {
+      alert("Missing user ID.");
+    }
 
+    function initMap() {
+      map = L.map('map').setView([30.0444, 31.2357], 13); // Default to Cairo
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '© OpenStreetMap'
+      }).addTo(map);
+    }
 
-      // Set download link
-      const link = document.getElementById("downloadEncryptedView");
-      const blob = new Blob([Uint8Array.from(atob(json.b64_image), c => c.charCodeAt(0))], { type: "image/bmp" });
-      link.href = URL.createObjectURL(blob);
+    function callNumber(number) {
+      window.location.href = `tel:${number}`;
+    }
+
+    async function fetchLocation(userId) {
+      try {
+        const res = await fetch(`http://localhost:8000/get-location?user_id=${userId}`);
+        if (!res.ok) throw new Error("Location not found");
+
+        const data = await res.json();
+        console.log("Fetched location:", data);
+
+        const { lat, lon, user_phone, admin_phone } = data;
+
+        if (marker) map.removeLayer(marker);
+
+        map.setView([lat, lon], 15);
+        marker = L.marker([lat, lon]).addTo(map)
+          .bindPopup("📍 User Location").openPopup();
+
+        // Set up call buttons
+        const callUserBtn = document.getElementById('callUser');
+        const callAdminBtn = document.getElementById('callAdmin');
+
+        callUserBtn.onclick = () => callNumber(user_phone);
+        callAdminBtn.onclick = () => callNumber(admin_phone);
+
+      } catch (err) {
+        console.error("Error fetching location:", err);
+        alert("Failed to load user location.");
+      }
+    }
+
+    window.onload = () => {
+      initMap();
+      if (userId) fetchLocation(userId);
     };
-  </script>
-
-  <script>
-    // document.getElementById("encryptForm").onsubmit = async (e) => {
-    //   e.preventDefault();
-    //   const formData = new FormData();
-    //   formData.append("file", document.getElementById("imgFile").files[0]);
-    //   formData.append("mode", document.getElementById("mode").value);
-
-    //   const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/encrypt/", {
-    //     method: "POST",
-    //     body: formData,
-    //   });
-    //   const blob = await res.blob();
-    //   const a = document.createElement("a");
-    //   a.href = URL.createObjectURL(blob);
-    //   a.download = "encrypted_output.bin";
-    //   a.click();
-    // };
-
-    // document.getElementById("decryptForm").onsubmit = async (e) => {
-    //   e.preventDefault();
-    //   const formData = new FormData();
-    //   formData.append("file", document.getElementById("binFile").files[0]);
-    //   formData.append("mode", document.getElementById("mode2").value);
-
-    //   const res = await fetch("https://image-enc-9296d2031ac1.hosted.ghaymah.systems/decrypt/", {
-    //     method: "POST",
-    //     body: formData,
-    //   });
-    //   const blob = await res.blob();
-    //   const a = document.createElement("a");
-    //   a.href = URL.createObjectURL(blob);
-    //   a.download = "decrypted_image.png";
-    //   a.click();
-    // };
   </script>
 </body>
 </html>
